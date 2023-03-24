@@ -1,5 +1,5 @@
 # layout
-layout是我的毕设
+layout是我的毕设/n
 用法:打开layout中的Publaynet放入数据集,然后运行layout_blt的中的main.py进行训练.
 然后将生成的模型存档命名为layout.pth放入layout_blt/save中,最后运行layout/MainWindow.py就能用了
 
