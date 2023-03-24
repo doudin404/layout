@@ -114,8 +114,8 @@ class JSONLayout(Dataset):
                 if not (np.all((bboxs[..., :2] + bboxs[..., 2:] <= self.size - 1))):
                     continue
 
-                indices = reading_order(bboxs)
-                #indices = np.lexsort((bboxs[:, 1], bboxs[:, 0]))
+                #indices = reading_order(bboxs)
+                indices = np.lexsort((bboxs[:, 1], bboxs[:, 0]))
                 bboxs = bboxs[indices]
                 categories = categories[indices]+self.size-1
 
