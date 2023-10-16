@@ -25,10 +25,31 @@ class Canvas(QFrame):
         self.canvas_size = 1024
         self.layout = {}
         self.select = -1
+        self.clean_mode=False
         self.dataTransformer = DataTransformer()
+
+    
+    def render_layout(self, layout=None, select=-1):
+        if layout is not None:
+            self.layout = layout
+        if select != -1:
+            self.select = select
+            
+        # 调用render_layout(data)将数据渲染为qpixmap类型
+        self.dataTransformer.randerSize=int(1.5*self.canvas_size)
+        self.pixmap = self.dataTransformer.render_layout(self.layout,select=self.select,clean_mode=self.clean_mode)
+        # 更新画板
+        self.update()
+
 
     def set_selected_row(self,row):
         self.select=row
+        self.render_layout()
+    def if_clean_mode(self):
+        return self.clean_mode
+
+    def set_clean_mode(self,clean_mode):
+        self.clean_mode=clean_mode
         self.render_layout()
 
     def resizeEvent(self, event):
@@ -47,17 +68,6 @@ class Canvas(QFrame):
 
         self.render_layout()
 
-    def render_layout(self, layout=None, select=-1):
-        if layout is not None:
-            self.layout = layout
-        if select != -1:
-            self.select = select
-            
-        # 调用render_layout(data)将数据渲染为qpixmap类型
-        self.dataTransformer.randerSize=int(1.5*self.canvas_size)
-        self.pixmap = self.dataTransformer.render_layout(self.layout,select=self.select)
-        # 更新画板
-        self.update()
 
     def paintEvent(self, event):
         # 将图片绘制到画板上，并根据画板的大小进行缩放
@@ -150,31 +160,36 @@ class ButtonWidget(QWidget):
     ask_generate = QtCore.Signal()
     ask_export = QtCore.Signal()
     ask_save = QtCore.Signal()
+    ask_detect = QtCore.Signal()
 
     def __init__(self):
         super().__init__()
 
         # 创建三个QPushButton对象，并设置它们的图标和文本
         self.generate_button = QPushButton()
-        self.generate_button.setIcon(QIcon("🔥"))
         self.generate_button.setText("生成")
         self.generate_button.clicked.connect(self.ask_generate)
 
+        self.detect_button = QPushButton()
+        self.detect_button.setText("检测")
+        self.detect_button.clicked.connect(self.ask_detect)
+
         self.export_button = QPushButton()
-        self.export_button.setIcon(QIcon("💾"))
         self.export_button.setText("导出")
         self.export_button.clicked.connect(self.ask_export)
 
+
         self.save_button = QPushButton()
-        self.save_button.setIcon(QIcon("📁"))
         self.save_button.setText("保存")
         self.save_button.clicked.connect(self.ask_save)
 
         # 创建一个水平布局，并将三个按钮添加到布局中
         layout = QHBoxLayout()
         layout.addWidget(self.generate_button)
+        layout.addWidget(self.detect_button)
         layout.addWidget(self.export_button)
         layout.addWidget(self.save_button)
+        
 
         # 将布局设置给按钮组件
         self.setLayout(layout)
@@ -189,6 +204,7 @@ class CanvaAndButton(QWidget):
     ask_generate = QtCore.Signal(int)
     ask_export = QtCore.Signal(int)
     ask_save = QtCore.Signal(int)
+    ask_detect = QtCore.Signal(int)
 
     def __init__(self):
         super().__init__()
@@ -207,6 +223,7 @@ class CanvaAndButton(QWidget):
         self.button_widget.ask_generate.connect(self.on_ask_generate)
         self.button_widget.ask_export.connect(self.on_ask_export)
         self.button_widget.ask_save.connect(self.on_ask_save)
+        self.button_widget.ask_detect.connect(self.on_ask_detect)
 
         #self.canvas.setMinimumSize(self.button_widget.width(),self.button_widget.width())
 
@@ -222,6 +239,9 @@ class CanvaAndButton(QWidget):
         tab_widget = split_widget.parent()
         tab_index = tab_widget.indexOf(split_widget)
         return tab_index
+    
+    def on_ask_detect(self):
+        self.ask_detect.emit(self.get_tab_index())
 
     def on_ask_generate(self):
         self.ask_generate.emit(self.get_tab_index())
@@ -240,6 +260,12 @@ class CanvaAndButton(QWidget):
 
     def get_pos(self):
         return self.canvas.get_pos()
+    
+    def if_clean_mode(self):
+        return self.canvas.if_clean_mode()
+    
+    def set_clean_mode(self,clean_mode):
+        self.canvas.set_clean_mode(clean_mode)
 
     def render_layout(self, layout):
         self.canvas.render_layout(layout)

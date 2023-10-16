@@ -38,7 +38,7 @@ def get_args():
 
     # Architecture/training options
     parser.add_argument("--seed", type=int, default=42, help="random seed")#42
-    parser.add_argument("--epochs", type=int, default=40,
+    parser.add_argument("--epochs", type=int, default=20,
                         help="number of epochs")
     parser.add_argument("--batch_size", type=int,
                         default=64, help="batch size")
@@ -83,17 +83,16 @@ if __name__ == "__main__":
     os.makedirs(samples_dir, exist_ok=True)
     os.makedirs(ckpt_dir, exist_ok=True)
 
-    #set_seed(args.seed)####记得复原
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"using device: {device}")
+    set_seed(args.seed)
 
     train_dataset = JSONLayout(
         args.train_json, percentage=args.data_cut_percentage)
     valid_dataset = JSONLayout(
-        args.val_json, max_length=train_dataset.max_length)
+        args.val_json, max_length=train_dataset.max_length) 
 
     mconf = BLTConfig(train_dataset.vocab_size, 
+                      mask_token=train_dataset.mask_token,
+                      eos_token=train_dataset.eos_token,
                       pad_token=train_dataset.pad_token,
                       n_layer=args.n_layer,
                       n_head=args.n_head,
@@ -119,8 +118,8 @@ if __name__ == "__main__":
                           end_mask_rate = args.end_mask_rate,
                           full_mask_rate_at = args.full_mask_rate_at)
     trainer = Trainer(model, train_dataset, valid_dataset, tconf, args)
-    trainer.train()
-    #if args.load:    
-    #    trainer.test()
-    #else:
-    #    trainer.train()
+
+    if args.load:    
+        trainer.test()
+    else:
+        trainer.train()

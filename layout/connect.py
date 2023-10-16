@@ -22,8 +22,11 @@ class ModelConnecter:
         y=self.model_caller.call(x).tolist()
         output_data,_=self.data_transformer.restore_layout(y)
         return output_data
-        
 
+    def detect(self,input_data):
+        x=torch.tensor(self.data_transformer.reformat_layout(input_data))
+        index=self.model_caller.detect(x)[0]
+        return index
 
 
 def adjust_rect(rect):
@@ -68,9 +71,9 @@ class DataTransformer:
         
         self.count=0
 
-    def render_layout(self, layout,select=-1):
+    def render_layout(self, layout,select=-1,clean_mode=False):
         new_layout = self.reformat_layout(layout)
-        img = self.render(tuple(tuple(x) for x in new_layout),randerSize=self.randerSize,select=select)
+        img = self.render(tuple(tuple(x) for x in new_layout),randerSize=self.randerSize,select=select,clean_mode=clean_mode)
         return self.pil_to_qpixmap(img)
 
     # 将QPointF对象转换为字典对象
@@ -92,6 +95,7 @@ class DataTransformer:
         item['W'] = int(qrectf.width() * self.size)
         item['H'] = int(qrectf.height() * self.size)
         item['A'] = int((qrectf.width() * qrectf.height()) ** 0.5 * self.size)
+        #item['A'] = int((qrectf.width() * qrectf.height()) * self.size)
         item['R'] = int(math.atan2(qrectf.height(), qrectf.width())
                         * 2 / math.pi * self.size)
         return item
@@ -172,7 +176,7 @@ class DataTransformer:
         return layout, confirmed
 
     @lru_cache(maxsize=30)
-    def render(self, layout,/,randerSize=2048,select=-1):
+    def render(self, layout,/,randerSize=2048,select=-1,clean_mode=False):
         #print(select,self.count)
         #self.count+=1
     
@@ -181,7 +185,7 @@ class DataTransformer:
                         color=(255, 255, 255))
         draw = ImageDraw.Draw(img, 'RGBA')
         layout = layout.reshape(-1)
-        layout = layout[:np.argwhere(layout == self.eos_token)[-1][0]]
+        layout = layout[:np.argwhere(layout == self.eos_token)[0][0]]
         layout = layout[: len(layout) // 7 * 7].reshape(-1, 7)
         box = layout[:, 1:5].astype(np.float32)
         box = box / self.size
@@ -204,21 +208,21 @@ class DataTransformer:
                                 outline=(0,0,0,255),
                                 fill=tuple(col) + (64,),
                                 width=4)
-
+        if not clean_mode:
             # 绘制方框编号和折线连接方框中心点
-        for i in range(len(layout)):
-            x1, y1, x2, y2 = box[i]
-            font = ImageFont.truetype("arial.ttf", int(20 * 2))
-            draw.text((x1, y1), str(i + 1), font=font,
-                      fill=(0, 0, 0, 255), align="left")
+            for i in range(len(layout)):
+                x1, y1, x2, y2 = box[i]
+                font = ImageFont.truetype("arial.ttf", int(20 * 2))
+                draw.text((x1, y1), str(i + 1), font=font,
+                        fill=(0, 0, 0, 255), align="left")
 
-            if i > 0:
-                x1_last, y1_last, x2_last, y2_last = box[i-1]
-                x_center, y_center = (x1+x2)/2, (y1+y2)/2
-                x_center_last, y_center_last = (
-                    x1_last+x2_last)/2, (y1_last+y2_last)/2
-                draw.line([(x_center_last, y_center_last), (x_center, y_center)],
-                          fill=(0, 0, 0, 255), width=5)
+                if i > 0:
+                    x1_last, y1_last, x2_last, y2_last = box[i-1]
+                    x_center, y_center = (x1+x2)/2, (y1+y2)/2
+                    x_center_last, y_center_last = (
+                        x1_last+x2_last)/2, (y1_last+y2_last)/2
+                    draw.line([(x_center_last, y_center_last), (x_center, y_center)],
+                            fill=(0, 0, 0, 255), width=5)
 
         # 添加图片边框
         img = ImageOps.expand(img, border=2)

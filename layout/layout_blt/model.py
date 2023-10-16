@@ -150,7 +150,7 @@ class LayoutEmbed(nn.Module):
 
     def forward(self, input_ids):
         seq_length = input_ids.shape[1]
-        position_ids = torch.arange(seq_length).unsqueeze(0)
+        position_ids = torch.arange(seq_length,device=input_ids.device).unsqueeze(0)
 
         word_embeddings = self.word_embedder(input_ids)
         position_embeddings = self.position_embedder(position_ids)

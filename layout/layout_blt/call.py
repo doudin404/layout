@@ -4,7 +4,7 @@ import torch
 import numpy as np
 import random
 from .model import BLT, BLTConfig
-from .sample import sample
+from .sample import sample,outlier_detect,bad_sample
 
 
 
@@ -29,7 +29,7 @@ def get_args():
     return parser.parse_args()
 
 class ModelCaller:
-    def __init__(self,load_name, size=2**8, categories=["text", "title", "list", "table", "figure"],max_steps=100):
+    def __init__(self,load_name="layout", size=2**8, categories=["text", "title", "list", "table", "figure"],max_steps=100):
         self.size = size
 
         self.categories = categories
@@ -52,6 +52,17 @@ class ModelCaller:
                           hidden_dropout_prob=args.hidden_dropout_prob,
                           attention_probs_dropout_prob=args.attention_probs_dropout_prob,
                           )
+        mconf = BLTConfig(vocab_size=self.vocab_size, 
+                    mask_token=self.mask_token,
+                    eos_token=self.eos_token,
+                    pad_token=self.pad_token,
+                    n_layer=args.n_layer,
+                    n_head=args.n_head,
+                    embed_size=args.embed_size,
+                    intermediate_size=args.intermediate_size,
+                    hidden_dropout_prob=args.hidden_dropout_prob,
+                    attention_probs_dropout_prob=args.attention_probs_dropout_prob,
+                    )
 
         self.model = BLT(mconf)
 
@@ -70,9 +81,19 @@ class ModelCaller:
     def call(self,x):
         total_dim = 7
         layout_dim = 2
-        masks=(x==self.mask_token)#&(torch.arange(x.shape[-1])[None, :].to(x.device)%total_dim<5)
-        y=sample(model=self.model,x=x,masks=masks,temperature=1.0, sample=True, top_k=5,max_steps=self.max_steps)
+        masks=(x==self.mask_token)
+        y=sample(model=self.model,x=x,masks=masks,temperature=1.0, sample=True, p=0.95,max_steps=self.max_steps)
         return y
+    
+    def detect(self, x):
+        # 计算masks
+        eos_positions = torch.argmax((x == self.eos_token).long(), dim=1)
+        masks = torch.where(torch.arange(x.shape[1],device=x.device).unsqueeze(0) < eos_positions.unsqueeze(1), torch.tensor(True), torch.tensor(False))
+    
+        # 调用outlier_detect
+        indexs = outlier_detect(self.model, x, masks)
+        return indexs
+    
     
 if __name__ == "__main__":
    model_caller = ModelCaller()
@@ -86,7 +107,7 @@ if __name__ == "__main__":
         model_caller.mask_token,
         model_caller.eos_token]
        ])
-   y=model_caller.call(x)
+   y=model_caller.detect(x)
    print(x)
    print(y)
 

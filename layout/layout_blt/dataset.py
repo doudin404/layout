@@ -125,7 +125,7 @@ class JSONLayout(Dataset):
                     continue
 
                 indices = reading_order(bboxs)
-                #indices = np.lexsort((bboxs[:, 1], bboxs[:, 0]))
+                #indices = np.lexsort((bboxs[:, 0], bboxs[:, 1]))
                 bboxs = bboxs[indices]
                 conditions =conditions[indices]
                 categories = categories[indices]+self.size-1
@@ -177,6 +177,7 @@ class JSONLayout(Dataset):
                            width=2)
 
             # 绘制方框编号和折线连接方框中心点
+        """
         for i in range(len(layout)):
             x1, y1, x2, y2 = box[i]
             font = ImageFont.truetype("arial.ttf", int(20 * 2))
@@ -190,6 +191,7 @@ class JSONLayout(Dataset):
                     x1_last+x2_last)/2, (y1_last+y2_last)/2
                 draw.line([(x_center_last, y_center_last), (x_center, y_center)],
                           fill=(0, 0, 0, 255), width=5)
+        """
 
         # 添加图片边框
         img = ImageOps.expand(img, border=2)
@@ -260,6 +262,7 @@ def reading_order(bboxs, indices=None):
         idx = np.lexsort((bboxs[indices, 0], bboxs[indices, 1]))
         return np.concatenate((indices[idx[:1]], reading_order(bboxs, indices[idx[1:]])))
     else:
+        #否则，选取厚度最大的切割线作为本次的切割线
         cut = candidate_cut[np.argmax(candidate)]
         return np.concatenate((reading_order(bboxs, np.array(cut[0])), reading_order(bboxs, np.array(cut[1]))))
 

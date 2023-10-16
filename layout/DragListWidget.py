@@ -77,6 +77,11 @@ class DragListWidget(QtWidgets.QListWidget):
 
         self.itemChanged.emit(self.get_tab_index(), -1, -1, -1)
 
+    def mousePressEvent(self, event):
+        if event.button() == QtCore.Qt.LeftButton:
+            self.setCurrentRow(-1)
+        super().mousePressEvent(event)
+
     def get_tab_index(self):
         split_widget = self.parent()
         if split_widget is None:
